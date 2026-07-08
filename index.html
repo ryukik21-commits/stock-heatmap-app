@@ -451,14 +451,6 @@
       border-color: var(--accent-color);
     }
 
-    .select-style {
-      appearance: none;
-      background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 0.8rem center;
-      background-size: 0.8rem;
-    }
-
     .btn-submit {
       width: 100%;
       background: var(--accent-color);
@@ -469,6 +461,16 @@
       font-weight: 600;
       font-size: 0.85rem;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+
+    .btn-submit:disabled {
+      background: var(--text-muted);
+      cursor: not-allowed;
+      opacity: 0.6;
     }
 
     /* バックアップカード */
@@ -731,31 +733,19 @@
             <h3><i data-lucide="plus-circle" style="color: #00e676; width: 16px; height: 16px;"></i> 銘柄を追加</h3>
             <form id="add-stock-form">
               <div class="form-group">
-                <label for="stock-symbol">コード / ティッカー</label>
+                <label for="stock-symbol">ティッカー / コード</label>
                 <input type="text" id="stock-symbol" class="input-style" placeholder="例: AAPL, 7203" required>
+                <p style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem;">
+                  ※日本株はコードに「.T」を付けてください (例: 7203.T)
+                </p>
               </div>
-              <div class="form-group">
-                <label for="stock-name">銘柄名</label>
-                <input type="text" id="stock-name" class="input-style" placeholder="例: トヨタ自動車" required>
-              </div>
-              <div class="form-group">
-                <label for="stock-market">市場</label>
-                <select id="stock-market" class="input-style select-style">
-                  <option value="US">米国市場 (USD)</option>
-                  <option value="JP">日本市場 (JPY)</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="stock-price">基準価格</label>
-                <input type="number" id="stock-price" step="any" class="input-style" placeholder="現在値" required>
-              </div>
-              <button type="submit" class="btn-submit">
-                <i data-lucide="plus" style="width: 14px; height: 14px; display: inline-block;"></i> リストに追加
+              <button type="submit" id="btn-add-submit" class="btn-submit">
+                <i data-lucide="search" style="width: 14px; height: 14px;"></i> データ取得＆追加
               </button>
             </form>
           </div>
 
-          <!-- データ管理（エクスポート・インポート） -->
+          <!-- データ管理 -->
           <div class="add-card">
             <h3><i data-lucide="database" style="color: #a78bfa; width: 16px; height: 16px;"></i> データ管理</h3>
             <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">登録銘柄のバックアップをJSONファイルで保存・復元できます。</p>
@@ -777,7 +767,7 @@
     <div id="tab-detail" class="tab-content">
       <div id="detail-no-selection" class="no-selection">
         <i data-lucide="bar-chart-2" style="width: 36px; height: 36px; color: var(--text-muted);"></i>
-        <p>銘柄を選択すると、詳細 data と関連ニュースが表示されます。</p>
+        <p>銘柄を選択すると、詳細データと関連ニュースが表示されます。</p>
       </div>
 
       <div id="detail-active-view" class="detail-layout" style="display: none;">
@@ -829,7 +819,7 @@
           { title: "【悪材料】[NAME]が急落、半導体部品の供給遅延リスクを懸念", body: "[NAME]（[SYMBOL]）が大幅落。一部サプライチェーンの滞りによる生産出荷遅れへの懸念から売りが急がれました。" }
         ],
         fall: [
-          { title: "【為替】円高方向への振れを嫌気し輸出株の[NAME]に利益確定売り", body: "為替相場が円高に振れたことをきっかけに、輸出関連の主力株である[NAME]（[SYMBOL]）に調整 of 売りが先行しています。" }
+          { title: "【為替】円高方向への振れを嫌気し輸出株の[NAME]に利益確定売り", body: "為替相場が円高に振れたことをきっかけに、輸出関連の主力株である[NAME]（[SYMBOL]）に調整の売りが先行しています。" }
         ],
         flat: [
           { title: "【個別】[NAME]は前日比付近で膠着、手掛かり難から動意薄", body: "新規材料に乏しく、[NAME]（[SYMBOL]）は小幅なもみ合いで推移。決算発表を前に積極的な売買は手控えられています。" }
@@ -1127,35 +1117,100 @@
       return heights.map((h, i) => `${i===0?'M':'L'} ${i*xStep} ${h}`).join(' ');
     }
 
-    // --- 銘柄の追加・削除 ---
+    // --- インターネットから株価情報をリアルタイムに取得する (CORSプロキシ経由) ---
+    async function fetchStockData(symbol) {
+      let formattedSymbol = symbol.trim().toUpperCase();
+      
+      // 4桁の数値（日本株の証券コード）であれば、自動的に「.T」を付与
+      if (/^\d{4}$/.test(formattedSymbol)) {
+        formattedSymbol += '.T';
+      }
+
+      // Yahoo FinanceのquoteエンドポイントをCORSプロキシ（allorigins）経由で取得
+      const targetUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${formattedSymbol}`;
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+
+      const response = await fetch(proxyUrl);
+      if (!response.ok) throw new Error('通信エラーが発生しました。ネットワーク接続を確認してください。');
+
+      const data = await response.json();
+      const quote = data.quoteResponse?.result?.[0];
+
+      if (!quote) {
+        throw new Error('該当する銘柄が見つかりませんでした。ティッカーシンボルが正しいか確認してください（日本株は末尾に「.T」が必要です）。');
+      }
+
+      const market = formattedSymbol.endsWith('.T') || quote.market === 'jp_market' ? 'JP' : 'US';
+      const capBillion = quote.marketCap ? Math.round(quote.marketCap / 1000000000) : 10;
+
+      return {
+        id: formattedSymbol.replace(/\./g, '_'),
+        symbol: formattedSymbol,
+        name: quote.longName || quote.shortName || formattedSymbol,
+        price: quote.regularMarketPrice,
+        prevClose: quote.regularMarketPreviousClose,
+        changePercent: quote.regularMarketChangePercent || 0.0,
+        market,
+        marketCap: capBillion
+      };
+    }
+
+    // --- 銘柄の追加機能 ---
     function initForm() {
       const form = document.getElementById('add-stock-form');
-      form.addEventListener('submit', (e) => {
+      const submitBtn = document.getElementById('btn-add-submit');
+      
+      form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const symbol = document.getElementById('stock-symbol').value.toUpperCase().trim();
-        const name = document.getElementById('stock-name').value.trim();
-        const market = document.getElementById('stock-market').value;
-        const price = parseFloat(document.getElementById('stock-price').value);
+        
+        const symbolInput = document.getElementById('stock-symbol').value.trim();
+        if (!symbolInput) return;
 
-        if(stocks.some(s => s.symbol === symbol)) {
-          alert('すでに登録されています');
+        // 重複チェック
+        let formattedSymbol = symbolInput.toUpperCase();
+        if (/^\d{4}$/.test(formattedSymbol)) {
+          formattedSymbol += '.T';
+        }
+        if (stocks.some(s => s.symbol === formattedSymbol)) {
+          alert('この銘柄は既に登録されています。');
           return;
         }
 
-        const newStock = {
-          id: symbol.replace(/\./g, '_'),
-          symbol, name, market, price, prevClose: price, changePercent: 0.0,
-          marketCap: market === 'US' ? 120 : 15
-        };
+        // ボタンをローディング状態にする
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i data-lucide="loader" class="animate-spin" style="width: 14px; height: 14px; animation: spin 1s linear infinite;"></i> 取得中...';
+        lucide.createIcons();
 
-        stocks.push(newStock);
-        saveStocks();
-        renderHeatmap();
-        renderList();
-        form.reset();
-        selectStock(newStock.id);
+        try {
+          const newStock = await fetchStockData(symbolInput);
+          
+          stocks.push(newStock);
+          saveStocks();
+          
+          renderHeatmap();
+          renderList();
+          form.reset();
+          selectStock(newStock.id);
+        } catch (err) {
+          alert('登録エラー: ' + err.message);
+        } finally {
+          // ボタン状態の復元
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i data-lucide="search" style="width: 14px; height: 14px;"></i> データ取得＆追加';
+          lucide.createIcons();
+        }
       });
     }
+
+    // アニメーション用CSSのキーフレームを動的追加
+    const styleSheet = document.createElement("style");
+    styleSheet.innerText = `
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(styleSheet);
 
     function deleteStock(id) {
       if(confirm('削除しますか？')) {
