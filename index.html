@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>銘柄ヒートマップ & 要因ニュース</title>
+  <!-- Lucide アイコン CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    /* プレミアムダーク・ネオン・ガラスモーフィズム テーマ */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap');
+
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121e;
+      --card-bg: rgba(24, 24, 38, 0.65);
+      --border-color: rgba(255, 255, 255, 0.08);
+      
+      --text-primary: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --text-muted: #6b7280;
+      
+      --neon-green: #00e676;
+      --neon-red: #ff3d00;
+      --neon-green-alpha: rgba(0, 230, 118, 0.15);
+      --neon-red-alpha: rgba(255, 61, 0, 0.15);
+      --accent-color: #7c3aed;
+      --accent-hover: #6d28d9;
+      
+      --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --shadow-premium: 0 10px 30px rgba(0, 0, 0, 0.5);
+      
+      font-family: 'Inter', system-ui, sans-serif;
+      color-scheme: dark;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(0, 230, 118, 0.05) 0px, transparent 50%);
+      background-attachment: fixed;
+    }
+
+    header {
+      padding: 1rem 1.5rem;
+      background: rgba(18, 18, 30, 0.8);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo-section h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #a78bfa, #00e676);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .logo-section span {
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      padding: 0.1rem 0.4rem;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .controls-section {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      background: rgba(255, 255, 255, 0.03);
+      padding: 0.3rem 0.6rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      box-shadow: 0 0 6px var(--neon-green);
+    }
+
+    .status-dot.paused {
+      background: #ffc107;
+      box-shadow: 0 0 6px #ffc107;
+    }
+
+    .btn-ctrl {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition-smooth);
+    }
+
+    .btn-ctrl:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--text-secondary);
+    }
+
+    .nav-tabs {
+      display: flex;
+      justify-content: center;
+      background: rgba(18, 18, 30, 0.5);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.4rem 0;
+    }
+
+    .tab-list {
+      display: flex;
+      gap: 0.3rem;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 0.2rem;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: var(--transition-smooth);
+    }
+
+    .tab-btn.active {
+      background: var(--accent-color);
+      color: #fff;
+      box-shadow: 0 3px 8px rgba(124, 58, 237, 0.3);
+    }
+
+    main {
+      flex: 1;
+      padding: 1rem;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ヒートマップ */
+    .heatmap-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 0.6rem;
+    }
+
+    .heatmap-tile {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.8rem;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 100px;
+      transition: var(--transition-smooth);
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(8px);
+    }
+
+    .heatmap-tile::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+
+    .heatmap-tile.up {
+      background: linear-gradient(135deg, rgba(24, 24, 38, 0.8), rgba(0, 230, 118, 0.03));
+      border-color: rgba(0, 230, 118, 0.1);
+    }
+    .heatmap-tile.up::before { background: var(--neon-green); }
+    .heatmap-tile.up:active {
+      border-color: rgba(0, 230, 118, 0.4);
+      box-shadow: 0 4px 12px var(--neon-green-alpha);
+    }
+
+    .heatmap-tile.down {
+      background: linear-gradient(135deg, rgba(24, 24, 38, 0.8), rgba(255, 61, 0, 0.03));
+      border-color: rgba(255, 61, 0, 0.1);
+    }
+    .heatmap-tile.down::before { background: var(--neon-red); }
+    .heatmap-tile.down:active {
+      border-color: rgba(255, 61, 0, 0.4);
+      box-shadow: 0 4px 12px var(--neon-red-alpha);
+    }
+
+    .tile-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tile-symbol {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .market-badge {
+      font-size: 0.6rem;
+      font-weight: 600;
+      padding: 0.1rem 0.3rem;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-secondary);
+    }
+
+    .market-badge.US { color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2); }
+    .market-badge.JP { color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.2); }
+
+    .tile-name {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 0.1rem;
+    }
+
+    .tile-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 0.6rem;
+    }
+
+    .tile-price {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .tile-change {
+      font-size: 0.8rem;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .tile-change.up { color: var(--neon-green); }
+    .tile-change.down { color: var(--neon-red); }
+
+    /* リスト画面 */
+    .list-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.2rem;
+    }
+
+    @media (min-width: 768px) {
+      .list-layout {
+        grid-template-columns: 1fr 300px;
+      }
+    }
+
+    .table-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow-x: auto;
+      backdrop-filter: blur(8px);
+    }
+
+    .stock-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      min-width: 450px;
+    }
+
+    .stock-table th {
+      padding: 0.8rem;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .stock-table td {
+      padding: 0.8rem;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.85rem;
+    }
+
+    .stock-table tbody tr:active {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .table-symbol-col {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .table-symbol {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+    }
+
+    .table-name {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .price-text {
+      font-weight: 600;
+    }
+
+    .btn-delete {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.3rem;
+      border-radius: 6px;
+    }
+
+    .btn-delete:active {
+      color: var(--neon-red);
+      background: var(--neon-red-alpha);
+    }
+
+    .add-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.2rem;
+    }
+
+    .add-card h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.05rem;
+      margin-bottom: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .form-group {
+      margin-bottom: 0.8rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.3rem;
+    }
+
+    .input-style {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.6rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-family: inherit;
+    }
+
+    .input-style:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    .select-style {
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.8rem center;
+      background-size: 0.8rem;
+    }
+
+    .btn-submit {
+      width: 100%;
+      background: var(--accent-color);
+      color: #fff;
+      border: none;
+      padding: 0.7rem;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    /* 詳細・ニュース画面 */
+    .detail-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.2rem;
+    }
+
+    @media (min-width: 900px) {
+      .detail-layout {
+        grid-template-columns: 380px 1fr;
+      }
+    }
+
+    .no-selection {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 3rem 1rem;
+      text-align: center;
+      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.8rem;
+      font-size: 0.85rem;
+    }
+
+    .detail-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .detail-title h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.5rem;
+    }
+
+    .detail-title p {
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+    }
+
+    .detail-price {
+      font-size: 1.6rem;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .detail-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+      border-top: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.8rem 0;
+    }
+
+    .metric-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .metric-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+    }
+
+    .metric-value {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .chart-box {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.8rem;
+    }
+
+    .chart-header {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.6rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .chart-svg {
+      width: 100%;
+      height: 90px;
+    }
+
+    .news-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .news-section h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .news-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .news-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1rem;
+      transition: var(--transition-smooth);
+    }
+
+    .news-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .news-source {
+      color: var(--accent-color);
+      font-weight: 600;
+    }
+
+    .news-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      line-height: 1.35;
+      margin-bottom: 0.4rem;
+      color: var(--text-primary);
+    }
+
+    .news-body {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ヘッダー -->
+  <header>
+    <div class="logo-section">
+      <h1>
+        <i data-lucide="layout-dashboard" style="color: #7c3aed;"></i>
+        NEON MAP
+        <span>v1.0.0</span>
+      </h1>
+    </div>
+    
+    <div class="controls-section">
+      <div class="status-indicator">
+        <div id="simulation-dot" class="status-dot"></div>
+        <span id="simulation-status-text">市場稼働中</span>
+      </div>
+      <button id="btn-toggle-sim" class="btn-ctrl" title="シミュレーションの一時停止/再開">
+        <i data-lucide="pause" id="icon-toggle-sim" style="width: 14px; height: 14px;"></i>
+      </button>
+      <button id="btn-reset-sim" class="btn-ctrl" title="株価と騰落を初期化">
+        <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- タブナビゲーション -->
+  <nav class="nav-tabs">
+    <div class="tab-list">
+      <button class="tab-btn active" data-target="tab-heatmap">
+        <i data-lucide="grid" style="width: 14px; height: 14px;"></i> ヒートマップ
+      </button>
+      <button class="tab-btn" data-target="tab-list">
+        <i data-lucide="list" style="width: 14px; height: 14px;"></i> 銘柄リスト
+      </button>
+      <button class="tab-btn" data-target="tab-detail">
+        <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i> 詳細
+      </button>
+    </div>
+  </nav>
+
+  <!-- メインコンテンツ -->
+  <main>
+    
+    <!-- 1. ヒートマップ画面 -->
+    <div id="tab-heatmap" class="tab-content active">
+      <div id="heatmap-grid" class="heatmap-container"></div>
+    </div>
+
+    <!-- 2. 銘柄リスト画面 -->
+    <div id="tab-list" class="tab-content">
+      <div class="list-layout">
+        <div class="table-card">
+          <table class="stock-table">
+            <thead>
+              <tr>
+                <th>コード</th>
+                <th>銘柄名</th>
+                <th>現在値</th>
+                <th>前日比 (%)</th>
+                <th style="width: 50px;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="stock-list-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="add-card">
+          <h3><i data-lucide="plus-circle" style="color: #00e676; width: 16px; height: 16px;"></i> 銘柄を追加</h3>
+          <form id="add-stock-form">
+            <div class="form-group">
+              <label for="stock-symbol">コード / ティッカー</label>
+              <input type="text" id="stock-symbol" class="input-style" placeholder="例: AAPL, 7203" required>
+            </div>
+            <div class="form-group">
+              <label for="stock-name">銘柄名</label>
+              <input type="text" id="stock-name" class="input-style" placeholder="例: トヨタ自動車" required>
+            </div>
+            <div class="form-group">
+              <label for="stock-market">市場</label>
+              <select id="stock-market" class="input-style select-style">
+                <option value="US">米国市場 (USD)</option>
+                <option value="JP">日本市場 (JPY)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="stock-price">基準価格</label>
+              <input type="number" id="stock-price" step="any" class="input-style" placeholder="現在値" required>
+            </div>
+            <button type="submit" class="btn-submit">
+              <i data-lucide="plus" style="width: 14px; height: 14px; display: inline-block;"></i> リストに追加
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 詳細・ニュース画面 -->
+    <div id="tab-detail" class="tab-content">
+      <div id="detail-no-selection" class="no-selection">
+        <i data-lucide="bar-chart-2" style="width: 36px; height: 36px; color: var(--text-muted);"></i>
+        <p>銘柄を選択すると、詳細データと関連ニュースが表示されます。</p>
+      </div>
+
+      <div id="detail-active-view" class="detail-layout" style="display: none;">
+        <div class="detail-card" id="detail-info-card"></div>
+        <div class="news-section">
+          <h3>
+            <i data-lucide="newspaper" style="color: #7c3aed; width: 18px; height: 18px;"></i>
+            値動き要因ニュース
+          </h3>
+          <div class="news-list" id="detail-news-list"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- アプリスクリプト -->
+  <script>
+    // --- 日米の主要な初期銘柄データ ---
+    const INITIAL_STOCKS = [
+      { id: 'AAPL', symbol: 'AAPL', name: 'Apple Inc.', market: 'US', price: 185.50, prevClose: 182.10, changePercent: 1.87, marketCap: 2900 },
+      { id: 'MSFT', symbol: 'MSFT', name: 'Microsoft Corp.', market: 'US', price: 415.20, prevClose: 420.50, changePercent: -1.26, marketCap: 3100 },
+      { id: 'NVDA', symbol: 'NVDA', name: 'NVIDIA Corp.', market: 'US', price: 875.12, prevClose: 840.00, changePercent: 4.18, marketCap: 2200 },
+      { id: 'TSLA', symbol: 'TSLA', name: 'Tesla Inc.', market: 'US', price: 175.40, prevClose: 181.20, changePercent: -3.20, marketCap: 560 },
+      { id: 'AMZN', symbol: 'AMZN', name: 'Amazon.com Inc.', market: 'US', price: 180.10, prevClose: 179.80, changePercent: 0.17, marketCap: 1870 },
+      
+      { id: '7203', symbol: '7203.T', name: 'トヨタ自動車', market: 'JP', price: 3420, prevClose: 3380, changePercent: 1.18, marketCap: 550 },
+      { id: '9984', symbol: '9984.T', name: 'ソフトバンクグループ', market: 'JP', price: 8250, prevClose: 8420, changePercent: -2.02, marketCap: 120 },
+      { id: '6758', symbol: '6758.T', name: 'ソニーグループ', market: 'JP', price: 12850, prevClose: 12700, changePercent: 1.18, marketCap: 160 },
+      { id: '8035', symbol: '8035.T', name: '東京エレクトロン', market: 'JP', price: 35400, prevClose: 34100, changePercent: 3.81, marketCap: 165 },
+      { id: '9432', symbol: '9432.T', name: '日本電信電話 (NTT)', market: 'JP', price: 168.5, prevClose: 169.0, changePercent: -0.30, marketCap: 150 }
+    ];
+
+    // --- ニュース生成用データ ---
+    const NEWS_TEMPLATES = {
+      US: {
+        sharp_rise: [
+          { title: "【材料】[NAME]が急騰、新製品の見通しが予想超え成長加速に期待", body: "米国市場で[NAME]（[SYMBOL]）の株価が急伸。新製品の需要予測が想定を上回り、成長期待が再燃。大口の買い注文が断続的に入っています。" }
+        ],
+        rise: [
+          { title: "【市況】金利低下を追い風にテック大手の[NAME]が買い戻される", body: "米金利の落ち着きを受け、[NAME]（[SYMBOL]）などのグロース株に割安感からの買いが入っています。" }
+        ],
+        sharp_fall: [
+          { title: "【悪材料】[NAME]が大幅続落、通期の業績ガイダンスを下方修正で失望売り", body: "[NAME]（[SYMBOL]）が引け後に通期見通しを引き下げ。インフレ継続による消費者の買い控えが嫌気されました。" }
+        ],
+        fall: [
+          { title: "【市況】利益確定売りに押され[NAME]が小幅反落、ハイテク全般が軟調", body: "市場全体が利益確定売りに押される中、目立った悪材料がないものの[NAME]（[SYMBOL]）も連れ安となっています。" }
+        ],
+        flat: [
+          { title: "【材料難】[NAME]はもみ合い、重要イベント控え様子見ムード", body: "主要経済指標の発表を控え、[NAME]（[SYMBOL]）の商いは限定的で方向感を欠いています。" }
+        ]
+      },
+      JP: {
+        sharp_rise: [
+          { title: "【材料】[NAME]が急騰、円安による業績上振れ恩恵と自社株買いを好感", body: "東京市場で[NAME]（[SYMBOL]）が急伸。想定以上の円安による採算改善と、大規模な株主還元策の発表が機関投資家に評価されています。" }
+        ],
+        rise: [
+          { title: "【市況】日経平均のリバウンドに追従し[NAME]に買い戻し優勢", body: "全体相場が買い優勢の中、代表的な日本株である[NAME]（[SYMBOL]）にも自律反発狙いの買いが波及しています。" }
+        ],
+        sharp_fall: [
+          { title: "【悪材料】[NAME]が急落、半導体部品の供給遅延リスクを懸念", body: "[NAME]（[SYMBOL]）が大幅落。一部サプライチェーンの滞りによる生産出荷遅れへの懸念から売りが急がれました。" }
+        ],
+        fall: [
+          { title: "【為替】円高方向への振れを嫌気し輸出株の[NAME]に利益確定売り", body: "為替相場が円高に振れたことをきっかけに、輸出関連の主力株である[NAME]（[SYMBOL]）に調整の売りが先行しています。" }
+        ],
+        flat: [
+          { title: "【個別】[NAME]は前日比付近で膠着、手掛かり難から動意薄", body: "新規材料に乏しく、[NAME]（[SYMBOL]）は小幅なもみ合いで推移。決算発表を前に積極的な売買は手控えられています。" }
+        ]
+      }
+    };
+
+    function generateNews(stock, changePercent) {
+      const templates = NEWS_TEMPLATES[stock.market];
+      let category = 'flat';
+      if (changePercent >= 2.5) category = 'sharp_rise';
+      else if (changePercent >= 0.5) category = 'rise';
+      else if (changePercent <= -2.5) category = 'sharp_fall';
+      else if (changePercent <= -0.5) category = 'fall';
+
+      const tpls = templates[category];
+      return tpls.map((t, idx) => {
+        const title = t.title.replace(/\[NAME\]/g, stock.name).replace(/\[SYMBOL\]/g, stock.symbol);
+        const body = t.body.replace(/\[NAME\]/g, stock.name).replace(/\[SYMBOL\]/g, stock.symbol);
+        const time = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+        return {
+          id: `${stock.id}_${category}_${idx}`,
+          title,
+          body,
+          time: `本日 ${time}`,
+          source: stock.market === 'US' ? 'Wall Street Insight' : '日経総合経済ニュース'
+        };
+      });
+    }
+
+    function simulatePriceChanges(stocksList) {
+      return stocksList.map(stock => {
+        const changeRatio = (Math.random() - 0.5) * 0.02; // -1%〜+1%
+        let newPrice = stock.price * (1 + changeRatio);
+        if (stock.market === 'JP') {
+          newPrice = Math.max(1, Math.round(newPrice));
+        } else {
+          newPrice = Math.max(0.01, Math.round(newPrice * 100) / 100);
+        }
+        const changePercent = ((newPrice - stock.prevClose) / stock.prevClose) * 100;
+        return {
+          ...stock,
+          price: newPrice,
+          changePercent: Math.round(changePercent * 100) / 100
+        };
+      });
+    }
+
+    // --- アプリ状態 ---
+    let stocks = [];
+    let selectedStockId = null;
+    let isSimulating = true;
+    let simInterval = null;
+    const STORAGE_KEY = 'NEON_MAP_STOCKS_MOBILE';
+
+    function loadStocks() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try { stocks = JSON.parse(saved); } catch(e) { stocks = [...INITIAL_STOCKS]; }
+      } else {
+        stocks = [...INITIAL_STOCKS];
+      }
+    }
+
+    function saveStocks() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stocks));
+    }
+
+    // --- DOMロード後のイベント ---
+    document.addEventListener('DOMContentLoaded', () => {
+      loadStocks();
+      initTabs();
+      initSimulation();
+      initForm();
+      
+      renderHeatmap();
+      renderList();
+      renderDetail();
+      
+      lucide.createIcons();
+    });
+
+    function initTabs() {
+      const tabs = document.querySelectorAll('.tab-btn');
+      const contents = document.querySelectorAll('.tab-content');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          tabs.forEach(t => t.classList.remove('active'));
+          contents.forEach(c => c.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById(tab.dataset.target).classList.add('active');
+        });
+      });
+    }
+
+    function switchToTab(tabId) {
+      const btn = document.querySelector(`.tab-btn[data-target="${tabId}"]`);
+      if (btn) btn.click();
+    }
+
+    function selectStock(id) {
+      selectedStockId = id;
+      renderDetail();
+      switchToTab('tab-detail');
+    }
+
+    // --- 描画ロジック ---
+    function renderHeatmap() {
+      const grid = document.getElementById('heatmap-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      
+      stocks.forEach(stock => {
+        const isUp = stock.changePercent >= 0;
+        const tile = document.createElement('div');
+        tile.className = `heatmap-tile ${isUp ? 'up' : 'down'}`;
+        
+        // 時価総額によるサイズ強弱
+        let style = '';
+        if (stock.marketCap > 1000) {
+          style = 'grid-column: span 2; grid-row: span 2; min-height: 140px;';
+        }
+        tile.setAttribute('style', style);
+
+        const sign = isUp ? '+' : '';
+        const currency = stock.market === 'US' ? '$' : '¥';
+        const priceStr = currency + (stock.market === 'US' ? stock.price.toFixed(2) : stock.price.toLocaleString());
+
+        tile.innerHTML = `
+          <div class="tile-header">
+            <span class="tile-symbol">${stock.symbol}</span>
+            <span class="market-badge ${stock.market}">${stock.market}</span>
+          </div>
+          <div class="tile-name">${stock.name}</div>
+          <div class="tile-footer">
+            <span class="tile-price">${priceStr}</span>
+            <span class="tile-change ${isUp ? 'up' : 'down'}">${sign}${stock.changePercent.toFixed(2)}%</span>
+          </div>
+        `;
+        
+        tile.addEventListener('click', () => selectStock(stock.id));
+        grid.appendChild(tile);
+      });
+    }
+
+    function renderList() {
+      const tbody = document.getElementById('stock-list-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      
+      stocks.forEach(stock => {
+        const isUp = stock.changePercent >= 0;
+        const currency = stock.market === 'US' ? '$' : '¥';
+        const priceStr = currency + (stock.market === 'US' ? stock.price.toFixed(2) : stock.price.toLocaleString());
+        const sign = isUp ? '+' : '';
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>
+            <div class="table-symbol-col">
+              <span class="table-symbol">${stock.symbol}</span>
+              <span class="market-badge ${stock.market}" style="width: fit-content; margin-top: 0.1rem;">${stock.market}</span>
+            </div>
+          </td>
+          <td><span class="table-name">${stock.name}</span></td>
+          <td><span class="price-text">${priceStr}</span></td>
+          <td><span class="tile-change ${isUp ? 'up' : 'down'}">${sign}${stock.changePercent.toFixed(2)}%</span></td>
+          <td>
+            <button class="btn-delete" data-id="${stock.id}">
+              <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+            </button>
+          </td>
+        `;
+        
+        tr.addEventListener('click', (e) => {
+          if (e.target.closest('.btn-delete')) return;
+          selectStock(stock.id);
+        });
+        
+        tr.querySelector('.btn-delete').addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteStock(stock.id);
+        });
+        
+        tbody.appendChild(tr);
+      });
+      lucide.createIcons();
+    }
+
+    function renderDetail() {
+      const noSelect = document.getElementById('detail-no-selection');
+      const active = document.getElementById('detail-active-view');
+      
+      if (!selectedStockId) {
+        noSelect.style.display = 'flex';
+        active.style.display = 'none';
+        return;
+      }
+      
+      const stock = stocks.find(s => s.id === selectedStockId);
+      if (!stock) {
+        selectedStockId = null;
+        noSelect.style.display = 'flex';
+        active.style.display = 'none';
+        return;
+      }
+      
+      noSelect.style.display = 'none';
+      active.style.display = 'grid';
+      
+      const isUp = stock.changePercent >= 0;
+      const currency = stock.market === 'US' ? '$' : '¥';
+      const priceStr = currency + (stock.market === 'US' ? stock.price.toFixed(2) : stock.price.toLocaleString());
+      const prevStr = currency + (stock.market === 'US' ? stock.prevClose.toFixed(2) : stock.prevClose.toLocaleString());
+      const capStr = stock.market === 'US' ? `${stock.marketCap}Bドル` : `${stock.marketCap}兆円`;
+      const sign = isUp ? '+' : '';
+
+      // ミニチャートパス生成
+      const chartPath = generateChartPath(stock.changePercent);
+
+      document.getElementById('detail-info-card').innerHTML = `
+        <div class="detail-header">
+          <div class="detail-title">
+            <h2>${stock.symbol}</h2>
+            <p>${stock.name}</p>
+            <span class="market-badge ${stock.market}" style="margin-top: 0.2rem; display: inline-block;">${stock.market === 'US' ? '米国株' : '日本株'}</span>
+          </div>
+          <div class="detail-pricing">
+            <div class="detail-price">${priceStr}</div>
+            <div class="tile-change ${isUp ? 'up' : 'down'}" style="font-weight: 700;">${sign}${stock.changePercent.toFixed(2)}%</div>
+          </div>
+        </div>
+        
+        <div class="chart-box">
+          <div class="chart-header">
+            <span>直近の値動き (シミュレート)</span>
+            <span style="color: ${isUp ? 'var(--neon-green)' : 'var(--neon-red)'}; font-weight:600;">${sign}${stock.changePercent.toFixed(2)}%</span>
+          </div>
+          <svg class="chart-svg" viewBox="0 0 300 90">
+            <line x1="0" y1="20" x2="300" y2="20" stroke="rgba(255,255,255,0.03)" />
+            <line x1="0" y1="45" x2="300" y2="45" stroke="rgba(255,255,255,0.03)" />
+            <line x1="0" y1="70" x2="300" y2="70" stroke="rgba(255,255,255,0.03)" />
+            <path d="${chartPath}" fill="none" stroke="${isUp ? 'var(--neon-green)' : 'var(--neon-red)'}" stroke-width="2.5" />
+          </svg>
+        </div>
+
+        <div class="detail-metrics">
+          <div class="metric-item"><span class="metric-label">前日終値</span><span class="metric-value">${prevStr}</span></div>
+          <div class="metric-item"><span class="metric-label">時価総額</span><span class="metric-value">${capStr}</span></div>
+        </div>
+      `;
+
+      // ニュース描画
+      const newsList = document.getElementById('detail-news-list');
+      const news = generateNews(stock, stock.changePercent);
+      newsList.innerHTML = '';
+      
+      news.forEach(n => {
+        const card = document.createElement('div');
+        card.className = 'news-card';
+        card.innerHTML = `
+          <div class="news-meta"><span class="news-source">${n.source}</span><span>${n.time}</span></div>
+          <div class="news-title">${n.title}</div>
+          <div class="news-body">${n.body}</div>
+        `;
+        newsList.appendChild(card);
+      });
+    }
+
+    function generateChartPath(change) {
+      const points = 8;
+      const xStep = 300 / (points - 1);
+      const heights = [45];
+      let val = 45;
+      
+      for(let i = 1; i < points - 1; i++) {
+        val = val + (Math.random() - 0.5) * 15 + (change * 1.5);
+        heights.push(Math.min(80, Math.max(10, val)));
+      }
+      // 終点は騰落率連動
+      heights.push(Math.min(85, Math.max(5, 45 - (change * 5))));
+      
+      return heights.map((h, i) => `${i===0?'M':'L'} ${i*xStep} ${h}`).join(' ');
+    }
+
+    // --- 銘柄の追加・削除 ---
+    function initForm() {
+      const form = document.getElementById('add-stock-form');
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const symbol = document.getElementById('stock-symbol').value.toUpperCase().trim();
+        const name = document.getElementById('stock-name').value.trim();
+        const market = document.getElementById('stock-market').value;
+        const price = parseFloat(document.getElementById('stock-price').value);
+
+        if(stocks.some(s => s.symbol === symbol)) {
+          alert('すでに登録されています');
+          return;
+        }
+
+        const newStock = {
+          id: symbol.replace(/\./g, '_'),
+          symbol, name, market, price, prevClose: price, changePercent: 0.0,
+          marketCap: market === 'US' ? 120 : 15
+        };
+
+        stocks.push(newStock);
+        saveStocks();
+        renderHeatmap();
+        renderList();
+        form.reset();
+        selectStock(newStock.id);
+      });
+    }
+
+    function deleteStock(id) {
+      if(confirm('削除しますか？')) {
+        stocks = stocks.filter(s => s.id !== id);
+        saveStocks();
+        if(selectedStockId === id) selectedStockId = null;
+        renderHeatmap();
+        renderList();
+        renderDetail();
+      }
+    }
+
+    // --- シミュレーション ---
+    function initSimulation() {
+      document.getElementById('btn-toggle-sim').addEventListener('click', toggleSim);
+      document.getElementById('btn-reset-sim').addEventListener('click', resetSim);
+      
+      simInterval = setInterval(() => {
+        if (!isSimulating) return;
+        stocks = simulatePriceChanges(stocks);
+        saveStocks();
+        renderHeatmap();
+        renderList();
+        if (selectedStockId) renderDetail();
+      }, 1500);
+    }
+
+    function toggleSim() {
+      isSimulating = !isSimulating;
+      const dot = document.getElementById('simulation-dot');
+      const text = document.getElementById('simulation-status-text');
+      const icon = document.getElementById('icon-toggle-sim');
+      
+      if(isSimulating) {
+        dot.classList.remove('paused');
+        text.textContent = '市場稼働中';
+        icon.setAttribute('data-lucide', 'pause');
+      } else {
+        dot.classList.add('paused');
+        text.textContent = '市場停止中';
+        icon.setAttribute('data-lucide', 'play');
+      }
+      lucide.createIcons();
+    }
+
+    function resetSim() {
+      if(confirm('初期化しますか？')) {
+        localStorage.removeItem(STORAGE_KEY);
+        loadStocks();
+        selectedStockId = null;
+        isSimulating = true;
+        
+        const dot = document.getElementById('simulation-dot');
+        const text = document.getElementById('simulation-status-text');
+        if(dot) dot.classList.remove('paused');
+        if(text) text.textContent = '市場稼働中';
+        
+        renderHeatmap();
+        renderList();
+        renderDetail();
+      }
+    }
+  </script>
+</body>
+</html>
