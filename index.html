@@ -276,7 +276,6 @@
     .market-badge.US { color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2); }
     .market-badge.JP { color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.2); }
 
-    /* モバイル・小画面向けに会社名は非表示に設定 */
     .tile-name {
       display: none;
     }
@@ -304,7 +303,6 @@
     .tile-change.up { color: var(--neon-green); }
     .tile-change.down { color: var(--neon-red); }
 
-    /* 空状態メッセージ */
     .empty-message {
       grid-column: 1 / -1;
       background: var(--card-bg);
@@ -471,6 +469,34 @@
       font-weight: 600;
       font-size: 0.85rem;
       cursor: pointer;
+    }
+
+    /* バックアップカード */
+    .backup-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.6rem;
+    }
+
+    .btn-backup {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.6rem;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      transition: var(--transition-smooth);
+    }
+
+    .btn-backup:active {
+      background: rgba(255, 255, 255, 0.1);
     }
 
     /* 詳細・ニュース画面 */
@@ -699,32 +725,50 @@
           </table>
         </div>
 
-        <div class="add-card">
-          <h3><i data-lucide="plus-circle" style="color: #00e676; width: 16px; height: 16px;"></i> 銘柄を追加</h3>
-          <form id="add-stock-form">
-            <div class="form-group">
-              <label for="stock-symbol">コード / ティッカー</label>
-              <input type="text" id="stock-symbol" class="input-style" placeholder="例: AAPL, 7203" required>
+        <div class="add-card-wrapper" style="display: flex; flex-direction: column; gap: 1rem;">
+          <!-- 銘柄追加フォーム -->
+          <div class="add-card">
+            <h3><i data-lucide="plus-circle" style="color: #00e676; width: 16px; height: 16px;"></i> 銘柄を追加</h3>
+            <form id="add-stock-form">
+              <div class="form-group">
+                <label for="stock-symbol">コード / ティッカー</label>
+                <input type="text" id="stock-symbol" class="input-style" placeholder="例: AAPL, 7203" required>
+              </div>
+              <div class="form-group">
+                <label for="stock-name">銘柄名</label>
+                <input type="text" id="stock-name" class="input-style" placeholder="例: トヨタ自動車" required>
+              </div>
+              <div class="form-group">
+                <label for="stock-market">市場</label>
+                <select id="stock-market" class="input-style select-style">
+                  <option value="US">米国市場 (USD)</option>
+                  <option value="JP">日本市場 (JPY)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="stock-price">基準価格</label>
+                <input type="number" id="stock-price" step="any" class="input-style" placeholder="現在値" required>
+              </div>
+              <button type="submit" class="btn-submit">
+                <i data-lucide="plus" style="width: 14px; height: 14px; display: inline-block;"></i> リストに追加
+              </button>
+            </form>
+          </div>
+
+          <!-- データ管理（エクスポート・インポート） -->
+          <div class="add-card">
+            <h3><i data-lucide="database" style="color: #a78bfa; width: 16px; height: 16px;"></i> データ管理</h3>
+            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">登録銘柄のバックアップをJSONファイルで保存・復元できます。</p>
+            <div class="backup-buttons">
+              <button id="btn-export" class="btn-backup">
+                <i data-lucide="download" style="width: 14px; height: 14px;"></i> 書き出し
+              </button>
+              <button id="btn-import-trigger" class="btn-backup">
+                <i data-lucide="upload" style="width: 14px; height: 14px;"></i> 読み込み
+              </button>
             </div>
-            <div class="form-group">
-              <label for="stock-name">銘柄名</label>
-              <input type="text" id="stock-name" class="input-style" placeholder="例: トヨタ自動車" required>
-            </div>
-            <div class="form-group">
-              <label for="stock-market">市場</label>
-              <select id="stock-market" class="input-style select-style">
-                <option value="US">米国市場 (USD)</option>
-                <option value="JP">日本市場 (JPY)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="stock-price">基準価格</label>
-              <input type="number" id="stock-price" step="any" class="input-style" placeholder="現在値" required>
-            </div>
-            <button type="submit" class="btn-submit">
-              <i data-lucide="plus" style="width: 14px; height: 14px; display: inline-block;"></i> リストに追加
-            </button>
-          </form>
+            <input type="file" id="input-import" accept=".json" style="display: none;">
+          </div>
         </div>
       </div>
     </div>
@@ -733,7 +777,7 @@
     <div id="tab-detail" class="tab-content">
       <div id="detail-no-selection" class="no-selection">
         <i data-lucide="bar-chart-2" style="width: 36px; height: 36px; color: var(--text-muted);"></i>
-        <p>銘柄を選択すると、詳細データと関連ニュースが表示されます。</p>
+        <p>銘柄を選択すると、詳細 data と関連ニュースが表示されます。</p>
       </div>
 
       <div id="detail-active-view" class="detail-layout" style="display: none;">
@@ -752,7 +796,7 @@
 
   <!-- アプリスクリプト -->
   <script>
-    // --- 初期状態を空に設定（ユーザー自身が登録した銘柄のみにするため） ---
+    // --- 初期状態を空に設定 ---
     const INITIAL_STOCKS = [];
 
     // --- ニュース生成用データ ---
@@ -762,7 +806,7 @@
           { title: "【材料】[NAME]が急騰、新製品の見通しが予想超え成長加速に期待", body: "米国市場で[NAME]（[SYMBOL]）の株価が急伸。新製品の需要予測が想定を上回り、成長期待が再燃。大口の買い注文が断続的に入っています。" }
         ],
         rise: [
-          { title: "【市況】金利低下を追い風にテック大ての[NAME]が買い戻される", body: "米金利の落ち着きを受け、[NAME]（[SYMBOL]）などのグロース株に割安感からの買いが入っています。" }
+          { title: "【市況】金利低下を追い風にテック大手の[NAME]が買い戻される", body: "米金利の落ち着きを受け、[NAME]（[SYMBOL]）などのグロース株に割安感からの買いが入っています。" }
         ],
         sharp_fall: [
           { title: "【悪材料】[NAME]が大幅続落、通期の業績ガイダンスを下方修正で失望売り", body: "[NAME]（[SYMBOL]）が引け後に通期見通しを引き下げ。インフレ継続による消費者の買い控えが嫌気されました。" }
@@ -785,7 +829,7 @@
           { title: "【悪材料】[NAME]が急落、半導体部品の供給遅延リスクを懸念", body: "[NAME]（[SYMBOL]）が大幅落。一部サプライチェーンの滞りによる生産出荷遅れへの懸念から売りが急がれました。" }
         ],
         fall: [
-          { title: "【為替】円高方向への振れを嫌気し輸出株の[NAME]に利益確定売り", body: "為替相場が円高に振れたことをきっかけに、輸出関連の主力株である[NAME]（[SYMBOL]）に調整の売りが先行しています。" }
+          { title: "【為替】円高方向への振れを嫌気し輸出株の[NAME]に利益確定売り", body: "為替相場が円高に振れたことをきっかけに、輸出関連の主力株である[NAME]（[SYMBOL]）に調整 of 売りが先行しています。" }
         ],
         flat: [
           { title: "【個別】[NAME]は前日比付近で膠着、手掛かり難から動意薄", body: "新規材料に乏しく、[NAME]（[SYMBOL]）は小幅なもみ合いで推移。決算発表を前に積極的な売買は手控えられています。" }
@@ -860,6 +904,7 @@
       initTabs();
       initSimulation();
       initForm();
+      initBackup(); // バックアップ機能初期化
       
       renderHeatmap();
       renderList();
@@ -915,7 +960,6 @@
         const tile = document.createElement('div');
         tile.className = `heatmap-tile ${isUp ? 'up' : 'down'}`;
         
-        // スマホでの一覧性向上のため、時価総額によるサイズ強弱はスマホ（1枚HTML版）では均等化
         const sign = isUp ? '+' : '';
         const currency = stock.market === 'US' ? '$' : '¥';
         const priceStr = currency + (stock.market === 'US' ? stock.price.toFixed(2) : stock.price.toLocaleString());
@@ -1019,7 +1063,6 @@
       const capStr = stock.market === 'US' ? `${stock.marketCap}Bドル` : `${stock.marketCap}兆円`;
       const sign = isUp ? '+' : '';
 
-      // ミニチャートパス生成
       const chartPath = generateChartPath(stock.changePercent);
 
       document.getElementById('detail-info-card').innerHTML = `
@@ -1054,7 +1097,6 @@
         </div>
       `;
 
-      // ニュース描画
       const newsList = document.getElementById('detail-news-list');
       const news = generateNews(stock, stock.changePercent);
       newsList.innerHTML = '';
@@ -1082,7 +1124,6 @@
         heights.push(Math.min(80, Math.max(10, val)));
       }
       heights.push(Math.min(85, Math.max(5, 45 - (change * 5))));
-      
       return heights.map((h, i) => `${i===0?'M':'L'} ${i*xStep} ${h}`).join(' ');
     }
 
@@ -1124,6 +1165,65 @@
         renderHeatmap();
         renderList();
         renderDetail();
+      }
+    }
+
+    // --- バックアップ（インポート・エクスポート）機能 ---
+    function initBackup() {
+      const btnExport = document.getElementById('btn-export');
+      const btnImportTrigger = document.getElementById('btn-import-trigger');
+      const inputImport = document.getElementById('input-import');
+
+      if (btnExport) {
+        btnExport.addEventListener('click', () => {
+          if (stocks.length === 0) {
+            alert('エクスポートする銘柄がありません。');
+            return;
+          }
+          const dataStr = JSON.stringify(stocks, null, 2);
+          const blob = new Blob([dataStr], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `neon_map_portfolio_${new Date().toISOString().slice(0, 10)}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        });
+      }
+
+      if (btnImportTrigger && inputImport) {
+        btnImportTrigger.addEventListener('click', () => inputImport.click());
+        inputImport.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = function(event) {
+            try {
+              const importedData = JSON.parse(event.target.result);
+              if (!Array.isArray(importedData)) throw new Error('配列形式ではありません');
+              
+              const isValid = importedData.every(s => s.symbol && s.name && s.market && typeof s.price === 'number');
+              if (!isValid) throw new Error('必要なデータ項目が不足しています');
+
+              if (confirm(`${importedData.length}件の銘柄を読み込み、現在のリストを上書きしますか？`)) {
+                stocks = importedData;
+                saveStocks();
+                renderHeatmap();
+                renderList();
+                selectedStockId = null;
+                renderDetail();
+                alert('銘柄リストの復元が完了しました！');
+              }
+            } catch (err) {
+              alert('JSONファイルの読み込みに失敗しました。正しいポートフォリオファイルか確認してください。\nエラー: ' + err.message);
+            }
+            e.target.value = ''; // リセット
+          };
+          reader.readAsText(file);
+        });
       }
     }
 
