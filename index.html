@@ -56,7 +56,7 @@
     }
 
     header {
-      padding: 1rem 1.5rem;
+      padding: 0.8rem 1.2rem;
       background: rgba(18, 18, 30, 0.8);
       backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border-color);
@@ -70,7 +70,7 @@
 
     .logo-section h1 {
       font-family: 'Outfit', sans-serif;
-      font-size: 1.4rem;
+      font-size: 1.3rem;
       font-weight: 800;
       background: linear-gradient(135deg, #a78bfa, #00e676);
       -webkit-background-clip: text;
@@ -81,7 +81,7 @@
     }
 
     .logo-section span {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       font-weight: 400;
       color: var(--text-muted);
       border: 1px solid var(--border-color);
@@ -93,24 +93,24 @@
     .controls-section {
       display: flex;
       align-items: center;
-      gap: 0.8rem;
+      gap: 0.6rem;
     }
 
     .status-indicator {
       display: flex;
       align-items: center;
-      gap: 0.4rem;
-      font-size: 0.75rem;
+      gap: 0.3rem;
+      font-size: 0.7rem;
       color: var(--text-secondary);
       background: rgba(255, 255, 255, 0.03);
-      padding: 0.3rem 0.6rem;
-      border-radius: 8px;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
       border: 1px solid var(--border-color);
     }
 
     .status-dot {
-      width: 7px;
-      height: 7px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
       background: var(--neon-green);
       box-shadow: 0 0 6px var(--neon-green);
@@ -125,9 +125,9 @@
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--border-color);
       color: var(--text-primary);
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -145,15 +145,15 @@
       justify-content: center;
       background: rgba(18, 18, 30, 0.5);
       border-bottom: 1px solid var(--border-color);
-      padding: 0.4rem 0;
+      padding: 0.3rem 0;
     }
 
     .tab-list {
       display: flex;
-      gap: 0.3rem;
+      gap: 0.2rem;
       background: rgba(0, 0, 0, 0.3);
       padding: 0.2rem;
-      border-radius: 10px;
+      border-radius: 8px;
       border: 1px solid var(--border-color);
     }
 
@@ -161,14 +161,14 @@
       background: transparent;
       border: none;
       color: var(--text-secondary);
-      padding: 0.5rem 1rem;
-      font-size: 0.85rem;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
       font-weight: 500;
       border-radius: 6px;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 0.3rem;
+      gap: 0.2rem;
       transition: var(--transition-smooth);
     }
 
@@ -180,7 +180,7 @@
 
     main {
       flex: 1;
-      padding: 1rem;
+      padding: 0.8rem;
       max-width: 1400px;
       width: 100%;
       margin: 0 auto;
@@ -203,20 +203,20 @@
     /* ヒートマップ */
     .heatmap-container {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-      gap: 0.6rem;
+      grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+      gap: 0.4rem;
     }
 
     .heatmap-tile {
       background: var(--card-bg);
       border: 1px solid var(--border-color);
-      border-radius: 10px;
-      padding: 0.8rem;
+      border-radius: 8px;
+      padding: 0.5rem;
       cursor: pointer;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      min-height: 100px;
+      min-height: 80px;
       transition: var(--transition-smooth);
       position: relative;
       overflow: hidden;
@@ -261,14 +261,14 @@
     .tile-symbol {
       font-family: 'Outfit', sans-serif;
       font-weight: 700;
-      font-size: 0.95rem;
+      font-size: 0.85rem;
     }
 
     .market-badge {
-      font-size: 0.6rem;
+      font-size: 0.55rem;
       font-weight: 600;
-      padding: 0.1rem 0.3rem;
-      border-radius: 4px;
+      padding: 0.05rem 0.2rem;
+      border-radius: 3px;
       background: rgba(255, 255, 255, 0.06);
       color: var(--text-secondary);
     }
@@ -276,25 +276,23 @@
     .market-badge.US { color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2); }
     .market-badge.JP { color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.2); }
 
+    /* モバイル・小画面向けに会社名は非表示に設定 */
     .tile-name {
-      font-size: 0.7rem;
-      color: var(--text-secondary);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-top: 0.1rem;
+      display: none;
     }
 
     .tile-footer {
       display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      margin-top: 0.6rem;
+      flex-direction: column;
+      align-items: flex-start;
+      margin-top: 0.4rem;
+      gap: 0.1rem;
     }
 
     .tile-price {
-      font-size: 0.85rem;
+      font-size: 0.75rem;
       font-weight: 600;
+      color: var(--text-secondary);
     }
 
     .tile-change {
@@ -306,11 +304,38 @@
     .tile-change.up { color: var(--neon-green); }
     .tile-change.down { color: var(--neon-red); }
 
+    /* 空状態メッセージ */
+    .empty-message {
+      grid-column: 1 / -1;
+      background: var(--card-bg);
+      border: 1px dashed var(--border-color);
+      border-radius: 12px;
+      padding: 3rem 1.5rem;
+      text-align: center;
+      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.8rem;
+      font-size: 0.85rem;
+    }
+
+    .empty-message button {
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+
     /* リスト画面 */
     .list-layout {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 1.2rem;
+      gap: 1rem;
     }
 
     @media (min-width: 768px) {
@@ -331,21 +356,21 @@
       width: 100%;
       border-collapse: collapse;
       text-align: left;
-      min-width: 450px;
+      min-width: 400px;
     }
 
     .stock-table th {
-      padding: 0.8rem;
+      padding: 0.7rem;
       border-bottom: 1px solid var(--border-color);
       color: var(--text-muted);
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       font-weight: 600;
     }
 
     .stock-table td {
-      padding: 0.8rem;
+      padding: 0.7rem;
       border-bottom: 1px solid var(--border-color);
-      font-size: 0.85rem;
+      font-size: 0.8rem;
     }
 
     .stock-table tbody tr:active {
@@ -363,7 +388,7 @@
     }
 
     .table-name {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       color: var(--text-secondary);
     }
 
@@ -727,20 +752,8 @@
 
   <!-- アプリスクリプト -->
   <script>
-    // --- 日米の主要な初期銘柄データ ---
-    const INITIAL_STOCKS = [
-      { id: 'AAPL', symbol: 'AAPL', name: 'Apple Inc.', market: 'US', price: 185.50, prevClose: 182.10, changePercent: 1.87, marketCap: 2900 },
-      { id: 'MSFT', symbol: 'MSFT', name: 'Microsoft Corp.', market: 'US', price: 415.20, prevClose: 420.50, changePercent: -1.26, marketCap: 3100 },
-      { id: 'NVDA', symbol: 'NVDA', name: 'NVIDIA Corp.', market: 'US', price: 875.12, prevClose: 840.00, changePercent: 4.18, marketCap: 2200 },
-      { id: 'TSLA', symbol: 'TSLA', name: 'Tesla Inc.', market: 'US', price: 175.40, prevClose: 181.20, changePercent: -3.20, marketCap: 560 },
-      { id: 'AMZN', symbol: 'AMZN', name: 'Amazon.com Inc.', market: 'US', price: 180.10, prevClose: 179.80, changePercent: 0.17, marketCap: 1870 },
-      
-      { id: '7203', symbol: '7203.T', name: 'トヨタ自動車', market: 'JP', price: 3420, prevClose: 3380, changePercent: 1.18, marketCap: 550 },
-      { id: '9984', symbol: '9984.T', name: 'ソフトバンクグループ', market: 'JP', price: 8250, prevClose: 8420, changePercent: -2.02, marketCap: 120 },
-      { id: '6758', symbol: '6758.T', name: 'ソニーグループ', market: 'JP', price: 12850, prevClose: 12700, changePercent: 1.18, marketCap: 160 },
-      { id: '8035', symbol: '8035.T', name: '東京エレクトロン', market: 'JP', price: 35400, prevClose: 34100, changePercent: 3.81, marketCap: 165 },
-      { id: '9432', symbol: '9432.T', name: '日本電信電話 (NTT)', market: 'JP', price: 168.5, prevClose: 169.0, changePercent: -0.30, marketCap: 150 }
-    ];
+    // --- 初期状態を空に設定（ユーザー自身が登録した銘柄のみにするため） ---
+    const INITIAL_STOCKS = [];
 
     // --- ニュース生成用データ ---
     const NEWS_TEMPLATES = {
@@ -749,7 +762,7 @@
           { title: "【材料】[NAME]が急騰、新製品の見通しが予想超え成長加速に期待", body: "米国市場で[NAME]（[SYMBOL]）の株価が急伸。新製品の需要予測が想定を上回り、成長期待が再燃。大口の買い注文が断続的に入っています。" }
         ],
         rise: [
-          { title: "【市況】金利低下を追い風にテック大手の[NAME]が買い戻される", body: "米金利の落ち着きを受け、[NAME]（[SYMBOL]）などのグロース株に割安感からの買いが入っています。" }
+          { title: "【市況】金利低下を追い風にテック大ての[NAME]が買い戻される", body: "米金利の落ち着きを受け、[NAME]（[SYMBOL]）などのグロース株に割安感からの買いが入っています。" }
         ],
         sharp_fall: [
           { title: "【悪材料】[NAME]が大幅続落、通期の業績ガイダンスを下方修正で失望売り", body: "[NAME]（[SYMBOL]）が引け後に通期見通しを引き下げ。インフレ継続による消費者の買い控えが嫌気されました。" }
@@ -885,18 +898,24 @@
       if (!grid) return;
       grid.innerHTML = '';
       
+      if (stocks.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-message">
+            <i data-lucide="info" style="color: var(--accent-color); width: 28px; height: 28px;"></i>
+            <p>マイ銘柄が登録されていません。<br>「銘柄リスト」タブからお気に入りの銘柄を追加してください。</p>
+            <button onclick="switchToTab('tab-list')">リストを開く</button>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+      
       stocks.forEach(stock => {
         const isUp = stock.changePercent >= 0;
         const tile = document.createElement('div');
         tile.className = `heatmap-tile ${isUp ? 'up' : 'down'}`;
         
-        // 時価総額によるサイズ強弱
-        let style = '';
-        if (stock.marketCap > 1000) {
-          style = 'grid-column: span 2; grid-row: span 2; min-height: 140px;';
-        }
-        tile.setAttribute('style', style);
-
+        // スマホでの一覧性向上のため、時価総額によるサイズ強弱はスマホ（1枚HTML版）では均等化
         const sign = isUp ? '+' : '';
         const currency = stock.market === 'US' ? '$' : '¥';
         const priceStr = currency + (stock.market === 'US' ? stock.price.toFixed(2) : stock.price.toLocaleString());
@@ -906,7 +925,6 @@
             <span class="tile-symbol">${stock.symbol}</span>
             <span class="market-badge ${stock.market}">${stock.market}</span>
           </div>
-          <div class="tile-name">${stock.name}</div>
           <div class="tile-footer">
             <span class="tile-price">${priceStr}</span>
             <span class="tile-change ${isUp ? 'up' : 'down'}">${sign}${stock.changePercent.toFixed(2)}%</span>
@@ -922,6 +940,17 @@
       const tbody = document.getElementById('stock-list-tbody');
       if (!tbody) return;
       tbody.innerHTML = '';
+      
+      if (stocks.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+              登録されている銘柄はありません。
+            </td>
+          </tr>
+        `;
+        return;
+      }
       
       stocks.forEach(stock => {
         const isUp = stock.changePercent >= 0;
@@ -1052,7 +1081,6 @@
         val = val + (Math.random() - 0.5) * 15 + (change * 1.5);
         heights.push(Math.min(80, Math.max(10, val)));
       }
-      // 終点は騰落率連動
       heights.push(Math.min(85, Math.max(5, 45 - (change * 5))));
       
       return heights.map((h, i) => `${i===0?'M':'L'} ${i*xStep} ${h}`).join(' ');
@@ -1133,9 +1161,9 @@
     }
 
     function resetSim() {
-      if(confirm('初期化しますか？')) {
+      if(confirm('登録銘柄と株価を初期状態（空）に戻しますか？')) {
         localStorage.removeItem(STORAGE_KEY);
-        loadStocks();
+        stocks = [];
         selectedStockId = null;
         isSimulating = true;
         
