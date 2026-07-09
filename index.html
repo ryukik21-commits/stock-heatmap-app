@@ -745,21 +745,27 @@
             </form>
           </div>
 
-          <!-- API設定（Twelve Data） -->
+          <!-- API / プロキシ 設定 -->
           <div class="add-card">
-            <h3><i data-lucide="key" style="color: #00e676; width: 16px; height: 16px;"></i> API設定 (推奨)</h3>
+            <h3><i data-lucide="key" style="color: #00e676; width: 16px; height: 16px;"></i> API / プロキシ設定</h3>
             <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
-              通信エラー（Failed to fetch）を防ぐため、無料の株価APIキーを設定して直接安定した通信を行うことができます。
+              CORS接続制限による通信エラーを防ぐための接続設定です。
             </p>
             <div class="form-group">
-              <label for="twelve-data-key">Twelve Data 無料APIキー</label>
-              <input type="text" id="twelve-data-key" class="input-style" placeholder="APIキーを入力してください">
-              <a href="https://twelvedata.com/" target="_blank" style="font-size: 0.7rem; color: var(--accent-color); display: inline-block; margin-top: 0.3rem; text-decoration: none;">
-                <i data-lucide="external-link" style="width: 10px; height: 10px; display: inline-block;"></i> 無料APIキーを取得する（twelvedata.com）
-              </a>
+              <label for="api-config-value">Twelve Dataキー または GASプロキシURL</label>
+              <input type="text" id="api-config-value" class="input-style" placeholder="APIキー または https://...">
+              
+              <div style="margin-top: 0.4rem; font-size: 0.7rem; color: var(--text-secondary);">
+                <strong>【方法A】Twelve Data (米国株のみ推奨)</strong><br>
+                <a href="https://twelvedata.com/" target="_blank" style="color: var(--accent-color); text-decoration: none;">無料登録でAPIキーを取得 ➜</a>
+              </div>
+              <div style="margin-top: 0.3rem; font-size: 0.7rem; color: var(--text-secondary);">
+                <strong>【方法B】Google Apps Script (日米両方・完全無制限)</strong><br>
+                ご自身専用のCORS回避プロキシURL（デプロイURL）を入力します。
+              </div>
             </div>
             <button id="btn-save-api" class="btn-submit" style="background: var(--accent-color); padding: 0.5rem;">
-              キーを保存
+              設定を保存
             </button>
           </div>
 
@@ -892,7 +898,7 @@
     let isSimulating = true;
     let simInterval = null;
     const STORAGE_KEY = 'NEON_MAP_STOCKS_MOBILE';
-    const API_KEY_STORAGE_KEY = 'NEON_MAP_TWELVE_DATA_API_KEY';
+    const API_CONFIG_STORAGE_KEY = 'NEON_MAP_API_CONFIG_VALUE'; // キーまたはGAS URL
 
     function loadStocks() {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -914,7 +920,7 @@
       initSimulation();
       initForm();
       initBackup(); // バックアップ機能初期化
-      initApiSettings(); // APIキー設定の初期化
+      initApiSettings(); // API設定の初期化
       
       renderHeatmap();
       renderList();
@@ -941,7 +947,6 @@
       if (btn) btn.click();
     }
 
-    // onclickなどでグローバルにタブ切り替えを可能にする
     window.switchToTab = switchToTab;
 
     function selectStock(id) {
@@ -1140,20 +1145,54 @@
       return heights.map((h, i) => `${i===0?'M':'L'} ${i*xStep} ${h}`).join(' ');
     }
 
-    // --- Twelve Data API を利用した安定通信 (CORSエラー・429回避用) ---
+    // --- Google Apps Script (GAS) 自作プロキシ経由でYahoo Financeデータを取得 ---
+    async function fetchStockDataGAS(symbol, gasUrl) {
+      let formattedSymbol = symbol.trim().toUpperCase();
+      if (/^\d{4}$/.test(formattedSymbol)) {
+        formattedSymbol += '.T';
+      }
+
+      const url = `${gasUrl}?symbol=${encodeURIComponent(formattedSymbol)}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('GASプロキシとの通信に失敗しました。URLが正しいか確認してください。');
+      }
+
+      const data = await response.json();
+      const quote = data.quoteResponse?.result?.[0];
+
+      if (!quote) {
+        throw new Error('該当する銘柄情報がみつかりませんでした。コードに間違いがないか確認してください。');
+      }
+
+      const market = formattedSymbol.endsWith('.T') || quote.market === 'jp_market' ? 'JP' : 'US';
+      const capBillion = quote.marketCap ? Math.round(quote.marketCap / 1000000000) : 10;
+
+      return {
+        id: formattedSymbol.replace(/\./g, '_'),
+        symbol: formattedSymbol,
+        name: quote.longName || quote.shortName || formattedSymbol,
+        price: quote.regularMarketPrice,
+        prevClose: quote.regularMarketPreviousClose,
+        changePercent: quote.regularMarketChangePercent || 0.0,
+        market,
+        marketCap: capBillion
+      };
+    }
+
+    // --- Twelve Data API を利用した安定通信 (米国株のみ無料枠) ---
     async function fetchStockDataTwelveData(symbol, apiKey) {
       let formattedSymbol = symbol.trim().toUpperCase();
       let isJP = false;
 
       if (/^\d{4}$/.test(formattedSymbol)) {
-        formattedSymbol += ':TSE'; // Twelve Dataでの東京証券取引所の指定方法
+        formattedSymbol += ':TSE';
         isJP = true;
       } else if (formattedSymbol.endsWith('.T')) {
         formattedSymbol = formattedSymbol.replace('.T', ':TSE');
         isJP = true;
       }
 
-      // Twelve Data の quote エンドポイントを直接叩く (CORS対応のためプロキシ不要)
       const url = `https://api.twelvedata.com/quote?symbol=${encodeURIComponent(formattedSymbol)}&apikey=${apiKey}`;
       const response = await fetch(url);
       
@@ -1164,18 +1203,16 @@
       const data = await response.json();
       
       if (data.code && data.code !== 200) {
-        throw new Error(`APIエラー: ${data.message}`);
+        throw new Error(`Twelve Data APIエラー: ${data.message} (※無料アカウントでは日本株TSEはサポートされていません。米国株のみ対応しています)`);
       }
 
       if (!data.symbol || !data.price) {
-        throw new Error('銘柄データを取得できませんでした。コードが正しいか確認してください（例: 米国株: AAPL、日本株: 7203）');
+        throw new Error('銘柄データを取得できませんでした。Twelve Dataの無料枠は日本株に対応していません。日本株を取得したい場合はGASプロキシを設定してください。');
       }
 
       const priceVal = parseFloat(data.price);
       const prevCloseVal = parseFloat(data.previous_close) || priceVal;
       const changePercentVal = parseFloat(data.percent_change) || 0.0;
-      
-      // 時価総額の計算 (Billion単位)
       const marketCapVal = data.market_cap ? Math.round(parseFloat(data.market_cap) / 1000000000) : 15;
 
       return {
@@ -1227,13 +1264,13 @@
       }
 
       if (!success) {
-        throw new Error(`株価サーバーへの接続にすべて失敗しました。無料APIキー（Twelve Data）を取得して設定するか、通信状態を確認してください。`);
+        throw new Error(`株価サーバーへの接続にすべて失敗しました。日本株・米国株を無制限に取得するには、GASプロキシの設定を推奨します。`);
       }
 
       const quote = data.quoteResponse?.result?.[0];
 
       if (!quote) {
-        throw new Error('該当する銘柄が見つかりませんでした。ティッカーシンボルが正しいか確認してください（日本株は4桁コードのみ、または末尾に「.T」が必要です）。');
+        throw new Error('該当する銘柄が見つかりませんでした。ティッカーシンボルが正しいか確認してください。');
       }
 
       const market = formattedSymbol.endsWith('.T') || quote.market === 'jp_market' ? 'JP' : 'US';
@@ -1276,14 +1313,17 @@
         lucide.createIcons();
 
         try {
-          const apiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+          const configValue = localStorage.getItem(API_CONFIG_STORAGE_KEY) || '';
           let newStock;
           
-          if (apiKey && apiKey.trim() !== '') {
-            // APIキーが設定されている場合は、CORSブロックのないTwelve Dataから超高速・安定取得
-            newStock = await fetchStockDataTwelveData(symbolInput, apiKey);
+          if (configValue.startsWith('http://') || configValue.startsWith('https://')) {
+            // A. GASプロキシのURLが登録されている場合は、GASから直接100%確実に取得 (日米対応・完全無制限)
+            newStock = await fetchStockDataGAS(symbolInput, configValue);
+          } else if (configValue.trim() !== '') {
+            // B. Twelve DataのAPIキーが登録されている場合は、Twelve Dataから直接取得 (米国株のみ)
+            newStock = await fetchStockDataTwelveData(symbolInput, configValue);
           } else {
-            // 設定されていない場合は、CORSプロキシ経由でYahoo Financeからフォールバック試行
+            // C. 何も登録されていない場合は、簡易プロキシ経由でYahoo Financeから取得 (IP制限によりエラーの可能性大)
             newStock = await fetchStockDataYahooFinanceFallback(symbolInput);
           }
           
@@ -1304,26 +1344,29 @@
       });
     }
 
-    // APIキー設定カードの初期化とイベントハンドリング
+    // API/プロキシ設定カードの初期化とイベントハンドリング
     function initApiSettings() {
-      const keyInput = document.getElementById('twelve-data-key');
+      const configInput = document.getElementById('api-config-value');
       const saveBtn = document.getElementById('btn-save-api');
 
-      if (keyInput && saveBtn) {
-        // 保存済みのキーを表示
-        const savedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
-        if (savedKey) {
-          keyInput.value = savedKey;
+      if (configInput && saveBtn) {
+        const savedConfig = localStorage.getItem(API_CONFIG_STORAGE_KEY);
+        if (savedConfig) {
+          configInput.value = savedConfig;
         }
 
         saveBtn.addEventListener('click', () => {
-          const keyVal = keyInput.value.trim();
-          if (keyVal === '') {
-            localStorage.removeItem(API_KEY_STORAGE_KEY);
-            alert('APIキーを解除しました。今後は低安定の簡易プロキシ経由でデータ取得を試みます。');
+          const val = configInput.value.trim();
+          if (val === '') {
+            localStorage.removeItem(API_CONFIG_STORAGE_KEY);
+            alert('接続設定を解除しました。今後は低安定の簡易プロキシ経由でデータ取得を試みます。');
           } else {
-            localStorage.setItem(API_KEY_STORAGE_KEY, keyVal);
-            alert('Twelve Data APIキーを正常に登録しました！次回からCORSエラーを回避し、高速かつ確実に株価を取得します。');
+            localStorage.setItem(API_CONFIG_STORAGE_KEY, val);
+            if (val.startsWith('http://') || val.startsWith('https://')) {
+              alert('【GASプロキシURL】を正常に保存しました！CORSエラーおよびIP制限を回避し、日本株・米国株を無制限に高速取得できます。');
+            } else {
+              alert('【Twelve Data APIキー】を正常に保存しました！CORSエラーを回避し、米国株を取得できます。(※無料プランでは日本株は取得できません。日本株が必要な場合はGASを設定してください)');
+            }
           }
         });
       }
@@ -1440,6 +1483,8 @@
       }
       lucide.createIcons();
     }
+
+    window.switchToTab = switchToTab;
 
     function resetSim() {
       if(confirm('登録銘柄と株価を初期状態（空）に戻しますか？')) {
