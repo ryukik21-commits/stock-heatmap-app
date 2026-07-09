@@ -745,7 +745,25 @@
             </form>
           </div>
 
-          <!-- データ管理 -->
+          <!-- API設定（Twelve Data） -->
+          <div class="add-card">
+            <h3><i data-lucide="key" style="color: #00e676; width: 16px; height: 16px;"></i> API設定 (推奨)</h3>
+            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+              通信エラー（Failed to fetch）を防ぐため、無料の株価APIキーを設定して直接安定した通信を行うことができます。
+            </p>
+            <div class="form-group">
+              <label for="twelve-data-key">Twelve Data 無料APIキー</label>
+              <input type="text" id="twelve-data-key" class="input-style" placeholder="APIキーを入力してください">
+              <a href="https://twelvedata.com/" target="_blank" style="font-size: 0.7rem; color: var(--accent-color); display: inline-block; margin-top: 0.3rem; text-decoration: none;">
+                <i data-lucide="external-link" style="width: 10px; height: 10px; display: inline-block;"></i> 無料APIキーを取得する（twelvedata.com）
+              </a>
+            </div>
+            <button id="btn-save-api" class="btn-submit" style="background: var(--accent-color); padding: 0.5rem;">
+              キーを保存
+            </button>
+          </div>
+
+          <!-- データ管理（エクスポート・インポート） -->
           <div class="add-card">
             <h3><i data-lucide="database" style="color: #a78bfa; width: 16px; height: 16px;"></i> データ管理</h3>
             <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">登録銘柄のバックアップをJSONファイルで保存・復元できます。</p>
@@ -874,6 +892,7 @@
     let isSimulating = true;
     let simInterval = null;
     const STORAGE_KEY = 'NEON_MAP_STOCKS_MOBILE';
+    const API_KEY_STORAGE_KEY = 'NEON_MAP_TWELVE_DATA_API_KEY';
 
     function loadStocks() {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -895,6 +914,7 @@
       initSimulation();
       initForm();
       initBackup(); // バックアップ機能初期化
+      initApiSettings(); // APIキー設定の初期化
       
       renderHeatmap();
       renderList();
@@ -920,6 +940,9 @@
       const btn = document.querySelector(`.tab-btn[data-target="${tabId}"]`);
       if (btn) btn.click();
     }
+
+    // onclickなどでグローバルにタブ切り替えを可能にする
+    window.switchToTab = switchToTab;
 
     function selectStock(id) {
       selectedStockId = id;
@@ -1117,27 +1140,100 @@
       return heights.map((h, i) => `${i===0?'M':'L'} ${i*xStep} ${h}`).join(' ');
     }
 
-    // --- インターネットから株価情報をリアルタイムに取得する (CORSプロキシ経由) ---
-    async function fetchStockData(symbol) {
+    // --- Twelve Data API を利用した安定通信 (CORSエラー・429回避用) ---
+    async function fetchStockDataTwelveData(symbol, apiKey) {
+      let formattedSymbol = symbol.trim().toUpperCase();
+      let isJP = false;
+
+      if (/^\d{4}$/.test(formattedSymbol)) {
+        formattedSymbol += ':TSE'; // Twelve Dataでの東京証券取引所の指定方法
+        isJP = true;
+      } else if (formattedSymbol.endsWith('.T')) {
+        formattedSymbol = formattedSymbol.replace('.T', ':TSE');
+        isJP = true;
+      }
+
+      // Twelve Data の quote エンドポイントを直接叩く (CORS対応のためプロキシ不要)
+      const url = `https://api.twelvedata.com/quote?symbol=${encodeURIComponent(formattedSymbol)}&apikey=${apiKey}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error('APIサーバーとの通信に失敗しました。');
+      }
+
+      const data = await response.json();
+      
+      if (data.code && data.code !== 200) {
+        throw new Error(`APIエラー: ${data.message}`);
+      }
+
+      if (!data.symbol || !data.price) {
+        throw new Error('銘柄データを取得できませんでした。コードが正しいか確認してください（例: 米国株: AAPL、日本株: 7203）');
+      }
+
+      const priceVal = parseFloat(data.price);
+      const prevCloseVal = parseFloat(data.previous_close) || priceVal;
+      const changePercentVal = parseFloat(data.percent_change) || 0.0;
+      
+      // 時価総額の計算 (Billion単位)
+      const marketCapVal = data.market_cap ? Math.round(parseFloat(data.market_cap) / 1000000000) : 15;
+
+      return {
+        id: formattedSymbol.replace(/:/g, '_'),
+        symbol: isJP ? formattedSymbol.replace(':TSE', '.T') : formattedSymbol,
+        name: data.name || formattedSymbol,
+        price: priceVal,
+        prevClose: prevCloseVal,
+        changePercent: changePercentVal,
+        market: isJP ? 'JP' : 'US',
+        marketCap: marketCapVal
+      };
+    }
+
+    // --- 予備：CORSプロキシ経由でYahoo Financeから情報が取得できるか試みる (APIキー未登録時のフォールバック用) ---
+    async function fetchStockDataYahooFinanceFallback(symbol) {
       let formattedSymbol = symbol.trim().toUpperCase();
       
-      // 4桁の数値（日本株の証券コード）であれば、自動的に「.T」を付与
       if (/^\d{4}$/.test(formattedSymbol)) {
         formattedSymbol += '.T';
       }
 
-      // Yahoo FinanceのquoteエンドポイントをCORSプロキシ（allorigins）経由で取得
       const targetUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${formattedSymbol}`;
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+      
+      const proxies = [
+        url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
+      ];
 
-      const response = await fetch(proxyUrl);
-      if (!response.ok) throw new Error('通信エラーが発生しました。ネットワーク接続を確認してください。');
+      let data = null;
+      let success = false;
+      let lastErrorMsg = '';
 
-      const data = await response.json();
+      for (const getProxyUrl of proxies) {
+        try {
+          const proxyUrl = getProxyUrl(targetUrl);
+          const response = await fetch(proxyUrl);
+          if (response.ok) {
+            data = await response.json();
+            success = true;
+            break;
+          } else {
+            lastErrorMsg = `ステータスコード: ${response.status}`;
+          }
+        } catch (e) {
+          lastErrorMsg = e.message;
+        }
+      }
+
+      if (!success) {
+        throw new Error(`株価サーバーへの接続にすべて失敗しました。無料APIキー（Twelve Data）を取得して設定するか、通信状態を確認してください。`);
+      }
+
       const quote = data.quoteResponse?.result?.[0];
 
       if (!quote) {
-        throw new Error('該当する銘柄が見つかりませんでした。ティッカーシンボルが正しいか確認してください（日本株は末尾に「.T」が必要です）。');
+        throw new Error('該当する銘柄が見つかりませんでした。ティッカーシンボルが正しいか確認してください（日本株は4桁コードのみ、または末尾に「.T」が必要です）。');
       }
 
       const market = formattedSymbol.endsWith('.T') || quote.market === 'jp_market' ? 'JP' : 'US';
@@ -1166,7 +1262,6 @@
         const symbolInput = document.getElementById('stock-symbol').value.trim();
         if (!symbolInput) return;
 
-        // 重複チェック
         let formattedSymbol = symbolInput.toUpperCase();
         if (/^\d{4}$/.test(formattedSymbol)) {
           formattedSymbol += '.T';
@@ -1176,13 +1271,21 @@
           return;
         }
 
-        // ボタンをローディング状態にする
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i data-lucide="loader" class="animate-spin" style="width: 14px; height: 14px; animation: spin 1s linear infinite;"></i> 取得中...';
         lucide.createIcons();
 
         try {
-          const newStock = await fetchStockData(symbolInput);
+          const apiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+          let newStock;
+          
+          if (apiKey && apiKey.trim() !== '') {
+            // APIキーが設定されている場合は、CORSブロックのないTwelve Dataから超高速・安定取得
+            newStock = await fetchStockDataTwelveData(symbolInput, apiKey);
+          } else {
+            // 設定されていない場合は、CORSプロキシ経由でYahoo Financeからフォールバック試行
+            newStock = await fetchStockDataYahooFinanceFallback(symbolInput);
+          }
           
           stocks.push(newStock);
           saveStocks();
@@ -1194,7 +1297,6 @@
         } catch (err) {
           alert('登録エラー: ' + err.message);
         } finally {
-          // ボタン状態の復元
           submitBtn.disabled = false;
           submitBtn.innerHTML = '<i data-lucide="search" style="width: 14px; height: 14px;"></i> データ取得＆追加';
           lucide.createIcons();
@@ -1202,7 +1304,31 @@
       });
     }
 
-    // アニメーション用CSSのキーフレームを動的追加
+    // APIキー設定カードの初期化とイベントハンドリング
+    function initApiSettings() {
+      const keyInput = document.getElementById('twelve-data-key');
+      const saveBtn = document.getElementById('btn-save-api');
+
+      if (keyInput && saveBtn) {
+        // 保存済みのキーを表示
+        const savedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+        if (savedKey) {
+          keyInput.value = savedKey;
+        }
+
+        saveBtn.addEventListener('click', () => {
+          const keyVal = keyInput.value.trim();
+          if (keyVal === '') {
+            localStorage.removeItem(API_KEY_STORAGE_KEY);
+            alert('APIキーを解除しました。今後は低安定の簡易プロキシ経由でデータ取得を試みます。');
+          } else {
+            localStorage.setItem(API_KEY_STORAGE_KEY, keyVal);
+            alert('Twelve Data APIキーを正常に登録しました！次回からCORSエラーを回避し、高速かつ確実に株価を取得します。');
+          }
+        });
+      }
+    }
+
     const styleSheet = document.createElement("style");
     styleSheet.innerText = `
       @keyframes spin {
